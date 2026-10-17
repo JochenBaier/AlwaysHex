@@ -1,0 +1,19 @@
+<!--
+  SPDX-License-Identifier: MIT
+  Copyright (c) 2026 Jochen Baier
+
+  C# test program for AlwaysHex (debugged by tests\3_test_debugger_values.ps1 -CSharp). Always built without
+  optimizations so every local variable stays visible in the debugger. Output: tests\bin\TestCSharp.exe
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <Optimize>false</Optimize>
+    <DebugType>full</DebugType>
+    <OutputPath>$(MSBuildThisFileDirectory)..\bin\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+</Project>

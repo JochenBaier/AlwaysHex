@@ -1,0 +1,7 @@
+bin/
+obj/
+*.user
+.vs/
+x64/
+tests/TestCpp/enc_temp_folder/
+*.swp

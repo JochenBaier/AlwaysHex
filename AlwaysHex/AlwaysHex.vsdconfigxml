@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SPDX-License-Identifier: MIT
+  Copyright (c) 2026 Jochen Baier
+
+  Tells the Visual Studio debug engine ("Concord") about our component: which class to
+  create, at which level it sits, and which requests it wants to see. The build turns this
+  file into the binary AlwaysHex.vsdconfig, which the VSIX registers with the debugger
+  (Asset type "DebuggerEngineExtension" in source.extension.vsixmanifest).
+
+  How VS picks a component: for each request it takes the component with the highest
+  level whose filter matches. The built-in expression evaluators sit at 9,992,000:
+    - C/C++: CppEE::CCppExprEval, filtered on runtime id + language id (C, C++, ...)
+    - C#:    VSDebugEngine.ManagedEE, filtered on runtime id only
+  We sit one step above, so we see every C/C++/C# request first and forward it to them.
+
+  Our forwarded requests carry a private compiler vendor id (see "THE ROUTING TRICK" in
+  AlwaysHexEvaluator.cs). The built-in evaluators do not check the vendor and accept them;
+  the CompilerVendorId filter below makes sure VS does not route them back to us.
+-->
+<Configuration xmlns="http://schemas.microsoft.com/vstudio/vsdconfig/2008">
+
+  <!-- Our own component id (any unique GUID). -->
+  <DefineGuid Name="guidAlwaysHexCompId" Value="8C2F3E51-4B7A-4D19-9E2C-6A0D5F7B1C93"/>
+  <!-- Fixed ids defined by Visual Studio (DkmLanguageId.Cpp / .C / .CSharp, DkmVendorId.Microsoft). -->
+  <DefineGuid Name="guidLanguageCpp" Value="3A12D0B7-C26C-11D0-B442-00A0244A1DD2"/>
+  <DefineGuid Name="guidLanguageC" Value="63A08714-FC37-11D2-904C-00C04FA302A1"/>
+  <DefineGuid Name="guidLanguageCSharp" Value="3F5162F8-07C6-11D3-9053-00C04FA302A1"/>
+  <DefineGuid Name="guidVendorMicrosoft" Value="994B45C4-E6E9-11D2-903F-00C04FA302A1"/>
+
+  <!--
+    ComponentLevel 9,993,000: above "IDE Expression Evaluation" (9,992,000), below the
+    "Breakpoint Manager" (9,994,000). Levels above 100,000 run inside devenv.exe.
+    Synchronized="false": the class keeps no shared state, VS may call it from any thread.
+  -->
+  <ManagedComponent
+    ComponentId="guidAlwaysHexCompId"
+    ComponentLevel="9993000"
+    AssemblyName="AlwaysHex"
+    Synchronized="false">
+
+    <Class Name="AlwaysHex.AlwaysHexEvaluator">
+      <Implements>
+        <InterfaceGroup>
+          <!--
+            Which requests reach us: language is C++, C or C# (any one of the LanguageId
+            values), AND the compiler vendor is Microsoft. Requests we forward ourselves
+            use a private vendor id and therefore skip us.
+          -->
+          <Filter>
+            <LanguageId RequiredValue="guidLanguageCpp"/>
+            <LanguageId RequiredValue="guidLanguageC"/>
+            <LanguageId RequiredValue="guidLanguageCSharp"/>
+            <CompilerVendorId RequiredValue="guidVendorMicrosoft"/>
+          </Filter>
+          <!-- Watch, Locals, Autos, data tips. -->
+          <Interface Name="IDkmLanguageExpressionEvaluator"/>
+          <!-- Call Stack window frame names ("add(int lhs=100, ...)"). -->
+          <Interface Name="IDkmLanguageFrameDecoder"/>
+        </InterfaceGroup>
+      </Implements>
+    </Class>
+
+  </ManagedComponent>
+</Configuration>

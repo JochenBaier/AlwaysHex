@@ -1,0 +1,3 @@
+# Store text files with LF in the repository, check them out with the platform's line endings.
+* text=auto
+*.png binary
