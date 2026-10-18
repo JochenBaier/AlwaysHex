@@ -24,9 +24,9 @@ namespace AlwaysHex
 
         protected override void OnClose()
         {
-            Inner.Close();
-            if (Other != null)
-                Other.Close();
+            // Close both even if one Close throws (DkmCleanup swallows the exception).
+            DkmCleanup.Close(Inner);
+            DkmCleanup.Close(Other);
         }
     }
 }
