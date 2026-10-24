@@ -9,6 +9,8 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net472</TargetFramework>
+    <!-- C# 9 or later for nint. -->
+    <LangVersion>latest</LangVersion>
     <PlatformTarget>x64</PlatformTarget>
     <Optimize>false</Optimize>
     <DebugType>full</DebugType>

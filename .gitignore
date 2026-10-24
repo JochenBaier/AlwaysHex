@@ -4,4 +4,6 @@ obj/
 .vs/
 x64/
 tests/TestCpp/enc_temp_folder/
+# Notepad++ source and build for 15_test_notepadpp.ps1 (downloaded by the test)
+tests/external/
 *.swp

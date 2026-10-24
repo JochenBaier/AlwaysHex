@@ -3,16 +3,16 @@
 
 namespace AlwaysHex
 {
-    /// <summary>Width in bits and signedness of an integer type (used by CSharpFormatter).</summary>
-    internal struct IntType
-    {
-        public readonly int Bits;
-        public readonly bool Signed;
+  /// <summary>Width in bits and signedness of an integer type (used by CSharpFormatter).</summary>
+  internal struct IntType
+  {
+    public readonly int Bits;
+    public readonly bool Signed;
 
-        public IntType(int bits, bool signed)
-        {
-            Bits = bits;
-            Signed = signed;
-        }
+    public IntType(int bits, bool signed)
+    {
+      Bits = bits;
+      Signed = signed;
     }
+  }
 }

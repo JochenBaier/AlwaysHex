@@ -3,30 +3,31 @@
   SPDX-License-Identifier: MIT
   Copyright (c) 2026 Jochen Baier
 
-  Tells the Visual Studio debug engine ("Concord") about our component: which class to
+  Tells the Visual Studio debug engine ("Concord") about our C/C++ component: which class to
   create, at which level it sits, and which requests it wants to see. The build turns this
-  file into the binary AlwaysHex.vsdconfig, which the VSIX registers with the debugger
-  (Asset type "DebuggerEngineExtension" in source.extension.vsixmanifest).
+  file (together with AlwaysHexClrFormatter.vsdconfigxml, the C# component) into the binary
+  AlwaysHex.vsdconfig, which the VSIX registers with the debugger (Asset type
+  "DebuggerEngineExtension" in source.extension.vsixmanifest).
 
   How VS picks a component: for each request it takes the component with the highest
-  level whose filter matches. The built-in expression evaluators sit at 9,992,000:
-    - C/C++: CppEE::CCppExprEval, filtered on runtime id + language id (C, C++, ...)
-    - C#:    VSDebugEngine.ManagedEE, filtered on runtime id only
-  We sit one step above, so we see every C/C++/C# request first and forward it to them.
+  level whose filter matches. The built-in C/C++ expression evaluator (CppEE::CCppExprEval)
+  sits at 9,992,000, filtered on runtime id + language id. We sit one step above, so we see
+  every C/C++ request first and forward it to it.
 
   Our forwarded requests carry a private compiler vendor id (see "THE ROUTING TRICK" in
-  AlwaysHexEvaluator.cs). The built-in evaluators do not check the vendor and accept them;
+  AlwaysHexEvaluator.cs). The built-in evaluator does not check the vendor and accepts them;
   the CompilerVendorId filter below makes sure VS does not route them back to us.
 -->
 <Configuration xmlns="http://schemas.microsoft.com/vstudio/vsdconfig/2008">
 
   <!-- Our own component id (any unique GUID). -->
   <DefineGuid Name="guidAlwaysHexCompId" Value="8C2F3E51-4B7A-4D19-9E2C-6A0D5F7B1C93"/>
-  <!-- Fixed ids defined by Visual Studio (DkmLanguageId.Cpp / .C / .CSharp, DkmVendorId.Microsoft). -->
+  <!-- Fixed ids defined by Visual Studio (DkmLanguageId.Cpp / .C, DkmVendorId.Microsoft,
+       DkmRuntimeId.Native). -->
   <DefineGuid Name="guidLanguageCpp" Value="3A12D0B7-C26C-11D0-B442-00A0244A1DD2"/>
   <DefineGuid Name="guidLanguageC" Value="63A08714-FC37-11D2-904C-00C04FA302A1"/>
-  <DefineGuid Name="guidLanguageCSharp" Value="3F5162F8-07C6-11D3-9053-00C04FA302A1"/>
   <DefineGuid Name="guidVendorMicrosoft" Value="994B45C4-E6E9-11D2-903F-00C04FA302A1"/>
+  <DefineGuid Name="guidRuntimeNative" Value="ACEC4DF9-31F4-46FD-946D-2194F653FD26"/>
 
   <!--
     ComponentLevel 9,993,000: above "IDE Expression Evaluation" (9,992,000), below the
@@ -39,24 +40,37 @@
     AssemblyName="AlwaysHex"
     Synchronized="false">
 
+    <!--
+      Which requests reach us. Within one filter, values of the same property are
+      alternatives (C or C++) and different properties must all match. Requests we forward
+      ourselves use a private vendor id and therefore skip us.
+
+      C and C++ only in native code: C++/CLI (C++ on the .NET runtime) and C++ AMP (GPU) have
+      their own expression evaluators, which do not accept the private vendor id; forwarding
+      them would change how their values look, so they are left alone.
+    -->
     <Class Name="AlwaysHex.AlwaysHexEvaluator">
       <Implements>
         <InterfaceGroup>
-          <!--
-            Which requests reach us: language is C++, C or C# (any one of the LanguageId
-            values), AND the compiler vendor is Microsoft. Requests we forward ourselves
-            use a private vendor id and therefore skip us.
-          -->
           <Filter>
             <LanguageId RequiredValue="guidLanguageCpp"/>
             <LanguageId RequiredValue="guidLanguageC"/>
-            <LanguageId RequiredValue="guidLanguageCSharp"/>
             <CompilerVendorId RequiredValue="guidVendorMicrosoft"/>
+            <RuntimeId RequiredValue="guidRuntimeNative"/>
           </Filter>
           <!-- Watch, Locals, Autos, data tips. -->
           <Interface Name="IDkmLanguageExpressionEvaluator"/>
+          <!-- Autos "f returned" rows (values returned while stepping). -->
+          <Interface Name="IDkmLanguageReturnValueEvaluator"/>
+          <Interface Name="IDkmLanguageReturnValueEvaluator2"/>
           <!-- Call Stack window frame names ("add(int lhs=100, ...)"). -->
           <Interface Name="IDkmLanguageFrameDecoder"/>
+          <!-- Features VS calls on a shown result; passed on to the EE's original result
+               (AlwaysHexEvaluator.ResultFeatures.cs). -->
+          <Interface Name="IDkmDataBreakpointInfoProvider"/>
+          <Interface Name="IDkmDataBreakpointInfoProvider160"/>
+          <Interface Name="IDkmObjectFavoritesProvider"/>
+          <Interface Name="IDkmLanguageObjectIdProvider"/>
         </InterfaceGroup>
       </Implements>
     </Class>

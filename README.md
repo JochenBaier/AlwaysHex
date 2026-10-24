@@ -26,16 +26,27 @@ The radix you picked with *Hexadecimal Display* always comes first. With hex dis
 
 ## Where it works
 
-- **Languages:** C, C++ and C#
+- **Languages:** C and C++ (native code) and C#. C++/CLI is left exactly as Visual Studio shows it.
 - **Windows:** data tips (hover), Watch, Locals, Autos, struct/class members, array elements,
   and the Call Stack window
-- **Visual Studio:** 2022 (17.x) and 2026 (18.x), Community, Professional and Enterprise, 64-bit
-  (tested with Community 2022, Professional 2022 and Professional 2026)
+- **Visual Studio:** 2022 and 2026, 64-bit.
+  - **Tested:** Visual Studio 2022 17.14 (Community) and Visual Studio 2026 18.11 (Professional)
+    with the full release tests; also used with Professional 2022.
+  - **Installable but not tested:** the installer also accepts every other 2022 version (17.0 and
+    later), other 2026 versions and the Enterprise edition. AlwaysHex relies on undocumented
+    debugger behavior (see [How it works](#how-it-works)), so on an untested version values may
+    show one radix only or an evaluation error.
 
 There is nothing to configure: install it and start debugging.
 
 **Copying a value:** *Copy Value* in the right-click menu copies both parts, for example
 `100 (0x00000064)`. To copy only the first part, double-click the value and press Ctrl+C.
+
+**Good to know:**
+
+- C#: visualizer windows (IEnumerable, DataTable, …) show their contents in one radix.
+- C#, remote debugging (Remote Tools): C# values are shown in one radix only, as without
+  AlwaysHex.
 
 ## Installation
 
@@ -53,75 +64,48 @@ it. Close Visual Studio, open a *Developer Command Prompt for VS 2026* and run
 
 ## How it works
 
-AlwaysHex is a component for the Visual Studio debug engine ("Concord"). It registers itself
-just above the built-in C/C++ and C# expression evaluators, so every request for a value reaches
-it first:
+AlwaysHex consists of two components for the Visual Studio debug engine ("Concord"):
 
-1. AlwaysHex forwards the request to the built-in evaluator.
-   - **C/C++:** it asks twice, once in your radix and once in the other one.
-   - **C#:** it asks once and computes the other radix itself from the value and its type.
-     Property getters are therefore never run twice.
-2. It merges the two answers, `100` + `0x00000064` → `100 (0x00000064)`, and hands the result
-   to Visual Studio.
+- **C/C++:** a component just above the built-in C/C++ expression evaluator, so every request
+  for a value reaches it first. It asks the evaluator twice, once in your radix and once in the
+  other one (without side effects), merges the two answers, `100` + `0x00000064` →
+  `100 (0x00000064)`, and hands the result to Visual Studio.
+- **C#:** a component just above the C# value formatter. When the formatter produces the text
+  for an integer, AlwaysHex adds the other radix. Nothing else changes, so all C# debugger
+  features (visualizers, Object IDs, …) keep working, and property getters never run twice.
 
 The source code in [`AlwaysHex/AlwaysHexEvaluator.cs`](AlwaysHex/AlwaysHexEvaluator.cs) starts
-with a detailed explanation, including the debugger terms it uses and the routing trick.
+with a detailed explanation, including the debugger terms it uses and the routing trick;
+[`AlwaysHex/AlwaysHexClrFormatter.cs`](AlwaysHex/AlwaysHexClrFormatter.cs) is the C# part.
 
 > [!WARNING]
 >
 > #### Undocumented Visual Studio behavior
 >
-> To pass requests on to the built-in evaluators, AlwaysHex relies on how Visual Studio routes them
-> internally. This routing is not documented by Microsoft. It is tested with Visual Studio 2022
-> 17.14 and Visual Studio 2026 18.11, but a future Visual Studio version may change it and need an
-> update of AlwaysHex. If that ever happens, the debugger shows the normal single value or an
-> evaluation error; it does not hang.
+> To pass requests on to the built-in C/C++ evaluator, AlwaysHex relies on how Visual Studio routes
+> them internally. This routing is not documented by Microsoft. It is tested only with Visual Studio
+> 2022 17.14 and Visual Studio 2026 18.11; other versions may behave differently, and a future
+> version may need an update of AlwaysHex. If the routing changes, C/C++ values may show one radix
+> only, look different, or show an evaluation error. AlwaysHex has guards that end a request which
+> keeps coming back to it with an error instead of looping, but it cannot guarantee that Visual Studio
+> or another debugger component it passes a request on to always answers.
 
 ## Building from source
 
-Requirements: Visual Studio 2022 or 2026 with the workloads ".NET desktop development"
-(for the extension) and "Desktop development with C++" (for the C++ test program).
-Everything else comes as NuGet packages, which MSBuild downloads automatically during the
-build (`-restore`).
+See [BUILDING.md](BUILDING.md).
 
-```powershell
-# everything: extension and test programs
-& "<Visual Studio>\MSBuild\Current\Bin\MSBuild.exe" AlwaysHex.sln -restore -p:Configuration=Release
+## Release tests
 
-# only the extension
-& "<Visual Studio>\MSBuild\Current\Bin\MSBuild.exe" vsix\vsix.csproj -restore -p:Configuration=Release
-```
-
-The result is `vsix\bin\Release\AlwaysHex.vsix`.
-
-### Release tests
-
-The `tests` folder contains two small test programs that are part of the solution,
-`TestCpp` (C++) and `TestCSharp` (C#), plus scripts that check AlwaysHex in a real Visual Studio.
-The test programs are built into `tests\bin`. The scripts build everything they need.
-
-The scripts use Visual Studio 2022 by default; add `-Vs 2026` for Visual Studio 2026. They only
-touch Visual Studio's *experimental instance* (`/rootsuffix Exp`), never your normal Visual
-Studio settings and extensions.
-
-| Script | Purpose |
-|---|---|
-| `tests\1_install_in_experimental_vs.ps1` | Builds the Release VSIX and installs it into the experimental instance |
-| `tests\2_test_value_merging_offline.ps1` | Offline checks of the value merging, no Visual Studio window needed |
-| `tests\3_test_debugger_values.ps1 [-CSharp]` | Debugs a test program and prints what the debugger shows, with hex display off and on |
-| `tests\4_test_debug_restart.ps1 [-CSharp]` | Starts and stops debugging several times in one Visual Studio session |
-| `tests\vs_automation_helpers.ps1` | Shared helper functions used by the scripts above (not run directly) |
-
-A full release test runs all four scripts in order. `tests\release_test_vs2022.cmd` and
-`tests\release_test_vs2026.cmd` do that for one Visual Studio version each (double-click or run
-from a command prompt). The scripts check the displayed values themselves; the files stop at the
-first failing step and report it.
+See [RELEASE_TESTS.md](RELEASE_TESTS.md): the test programs and scripts that check AlwaysHex in a
+real Visual Studio, and how to run the full release test.
 
 ## AI usage
 
 AlwaysHex was written by Claude (Claude Opus 5.5, an AI model by Anthropic), working in Claude
 Code: the idea for how to hook into the debugger, the source code, the build and packaging setup,
 the test programs and scripts, and most of this README.
+
+OpenAI Codex (Astra) reviewed the extension’s source code for potential Visual Studio crashes, hangs, and incorrect variable displays; no defects were found.
 
 I, Jochen, supervised the work: I described what I wanted, made the decisions (features,
 name, license, supported Visual Studio versions) and tested the extension by hand, including in

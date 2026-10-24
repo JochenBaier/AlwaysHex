@@ -66,6 +66,35 @@ Check ReplaceCharArguments @("f(wchar_t w=L'Z', unsigned char rhs='X')", $args1)
     "f(wchar_t w=90 (0x005a) L'Z', unsigned char rhs=200 (0xc8) 'X')"
 Check ReplaceCharArguments @("f(unsigned char rhs='Y')", $args1) $null
 Check ReplaceCharArguments @("f(const char * s=0x00001234 ""a'b"")", $args1) $null
+# Only real arguments: "rhs='X')" inside a string value stays as it is.
+Check ReplaceCharArguments @("f(unsigned char rhs='X', const char * s=0x00001234 ""rhs='X')"")", $args1) `
+    "f(unsigned char rhs=200 (0xc8) 'X', const char * s=0x00001234 ""rhs='X')"")"
+Check ReplaceCharArguments @("f(const char * s=0x00001234 ""rhs='X', w=L'Z'"")", $args1) $null
+Check ReplaceCharArguments @("f(const char * s=0x00001234 ""a\""b, rhs='X')"", unsigned char rhs='X')", $args1) `
+    "f(const char * s=0x00001234 ""a\""b, rhs='X')"", unsigned char rhs=200 (0xc8) 'X')"
+Check HasCharArgument @("f(const char * s=0x00001234 ""c='a')"")") $false
+# Escaped and special char literals, the argument list after operator() and before " Line 12".
+$args1['q'] = "39 (0x27) '\''"
+Check ReplaceCharArguments @("f(char q='\'', unsigned char rhs='X')", $args1) `
+    "f(char q=39 (0x27) '\'', unsigned char rhs=200 (0xc8) 'X')"
+Check ReplaceCharArguments @("TestCpp.exe!main::__l2::<lambda_1>::operator()(unsigned char rhs='X') Line 12", $args1) `
+    "TestCpp.exe!main::__l2::<lambda_1>::operator()(unsigned char rhs=200 (0xc8) 'X') Line 12"
+# MSVC symbol names `...' are names, not char literals (single-quoted here: a backtick is an
+# escape character in PowerShell double quotes, '' is one apostrophe).
+$args1['c'] = "97 (0x61) 'a'"
+Check ReplaceCharArguments @('`anonymous namespace''::f(char c=''a'')', $args1) `
+    '`anonymous namespace''::f(char c=97 (0x61) ''a'')'
+Check ReplaceCharArguments @('TestCpp.exe!`anonymous namespace''::`2''::f(unsigned char rhs=''X'') Line 5', $args1) `
+    'TestCpp.exe!`anonymous namespace''::`2''::f(unsigned char rhs=200 (0xc8) ''X'') Line 5'
+Check ReplaceCharArguments @('TestCpp.exe!`dynamic initializer for ''g_x''''(unsigned char rhs=''X'')', $args1) `
+    'TestCpp.exe!`dynamic initializer for ''g_x''''(unsigned char rhs=200 (0xc8) ''X'')'
+Check ReplaceCharArguments @('`anonymous namespace::f(char c=''a'')', $args1) $null
+# Not certain: unterminated string, unbalanced brackets, the same name twice -> unchanged.
+Check ReplaceCharArguments @("f(unsigned char rhs='X', const char * s=0x00001234 ""abc)", $args1) $null
+Check ReplaceCharArguments @("f(unsigned char rhs='X'", $args1) $null
+Check ReplaceCharArguments @("f(unsigned char rhs='X', unsigned char rhs='X')", $args1) $null
+# Members of a struct argument are not arguments.
+Check ReplaceCharArguments @("f(Point pt={x=1 rhs='X'})", $args1) $null
 
 # Struct summaries: both radixes up to 4 numbers.
 Check MergeSummary @('{x=1655 y=222}', '{x=0x00000677 y=0x000000de}', $false) '{x=1655 (0x00000677) y=222 (0x000000de)}'

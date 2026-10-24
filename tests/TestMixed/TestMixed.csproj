@@ -1,0 +1,20 @@
+<!--
+  SPDX-License-Identifier: MIT
+  Copyright (c) 2026 Jochen Baier
+
+  Mixed-mode test program for AlwaysHex (debugged by tests\13_test_mixed_mode.ps1): C# code that
+  calls the native TestNative.dll. Always built without optimizations so every local variable
+  stays visible in the debugger. Output: tests\bin\TestMixed.exe
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <Optimize>false</Optimize>
+    <DebugType>full</DebugType>
+    <OutputPath>$(MSBuildThisFileDirectory)..\bin\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+</Project>

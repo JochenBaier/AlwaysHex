@@ -1,0 +1,18 @@
+# Code style of the AlwaysHex component (Visual Studio and "dotnet format" read this file).
+root = true
+
+[*.cs]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+tab_width = 2
+# Long lines are fine; wrap only beyond this.
+max_line_length = 140
+
+# Braces on their own lines, and always braces, even for a single statement after if/else/for/foreach/while.
+csharp_new_line_before_open_brace = all
+csharp_prefer_braces = true:warning
+dotnet_diagnostic.IDE0011.severity = warning

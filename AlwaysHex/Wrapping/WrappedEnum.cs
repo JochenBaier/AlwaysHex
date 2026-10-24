@@ -6,27 +6,27 @@ using Microsoft.VisualStudio.Debugger.Evaluation;
 
 namespace AlwaysHex
 {
-    /// <summary>
-    /// Data item ("hidden field") attached to enum contexts we hand out; holds the real EE's
-    /// enum contexts in both radixes (<see cref="Other"/> is null when only one radix was
-    /// evaluated). Both are closed when VS closes ours (OnClose).
-    /// </summary>
-    internal sealed class WrappedEnum : DkmDataItem
+  /// <summary>
+  /// Data item ("hidden field") attached to enum contexts we hand out; holds the real EE's
+  /// enum contexts in both radixes (<see cref="Other"/> is null when only one radix was
+  /// evaluated). Both are closed when VS closes ours (OnClose).
+  /// </summary>
+  internal sealed class WrappedEnum : DkmDataItem
+  {
+    public readonly DkmEvaluationResultEnumContext Inner;
+    public readonly DkmEvaluationResultEnumContext Other;
+
+    public WrappedEnum(DkmEvaluationResultEnumContext inner, DkmEvaluationResultEnumContext other)
     {
-        public readonly DkmEvaluationResultEnumContext Inner;
-        public readonly DkmEvaluationResultEnumContext Other;
-
-        public WrappedEnum(DkmEvaluationResultEnumContext inner, DkmEvaluationResultEnumContext other)
-        {
-            Inner = inner;
-            Other = other;
-        }
-
-        protected override void OnClose()
-        {
-            // Close both even if one Close throws (DkmCleanup swallows the exception).
-            DkmCleanup.Close(Inner);
-            DkmCleanup.Close(Other);
-        }
+      Inner = inner;
+      Other = other;
     }
+
+    protected override void OnClose()
+    {
+      // Close both even if one Close throws (DkmCleanup swallows the exception).
+      DkmCleanup.Close(Inner);
+      DkmCleanup.Close(Other);
+    }
+  }
 }

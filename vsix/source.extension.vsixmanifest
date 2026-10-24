@@ -2,9 +2,9 @@
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
         <!-- Never change the Id after the first release: Visual Studio uses it to recognize updates. -->
-        <Identity Id="AlwaysHex.4f2b9c71-0d3e-4a58-b6e1-93c7a2d05f18" Version="0.1.0.0" Language="en-US" Publisher="Jochen Baier" />
+        <Identity Id="AlwaysHex.4f2b9c71-0d3e-4a58-b6e1-93c7a2d05f18" Version="0.2.0.0" Language="en-US" Publisher="Jochen Baier" />
         <DisplayName>AlwaysHex</DisplayName>
-        <Description xml:space="preserve">Show variable values in decimal and hex together: while you debug, AlwaysHex displays every integer value in both formats at once, for example 42 (0x002a). No more switching "Hexadecimal Display" on and off. Works for C, C++ and C# in data tips, Watch, Locals, Autos and the Call Stack window. Source code and documentation: https://github.com/JochenBaier/AlwaysHex</Description>
+        <Description xml:space="preserve">Show variable values in decimal and hex together: while you debug, AlwaysHex displays every integer value in both formats at once, for example 42 (0x0000002a). No more switching "Hexadecimal Display" on and off. Works for C, C++ and C# in data tips, Watch, Locals, Autos and the Call Stack window. Source code and documentation: https://github.com/JochenBaier/AlwaysHex</Description>
         <!-- Shown as the "More Information" link in the Extension Manager. -->
         <MoreInfo>https://github.com/JochenBaier/AlwaysHex</MoreInfo>
         <License>LICENSE.txt</License>
@@ -13,7 +13,9 @@
         <PreviewImage>AlwaysHex.png</PreviewImage>
         <Tags>hex, hexadecimal, decimal, debugger, debugging, watch, data tip, C++, C#</Tags>
     </Metadata>
-    <!-- [17.0, 19.0) = Visual Studio 2022 (17.x) and Visual Studio 2026 (18.x). -->
+    <!-- [17.0, 19.0) = Visual Studio 2022 (17.x) and Visual Studio 2026 (18.x). Tested only with
+         2022 17.14 and 2026 18.11 (README "Where it works"); the other versions may install but are
+         untested. Enterprise is accepted but cannot be tested here. -->
     <Installation>
       <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0, 19.0)">
         <ProductArchitecture>amd64</ProductArchitecture>

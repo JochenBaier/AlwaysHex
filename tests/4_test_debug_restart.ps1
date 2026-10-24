@@ -21,7 +21,7 @@ Use-Vs $Vs
 
 $target = Get-TestTarget -CSharp:$CSharp
 $session = Start-ExpVs $target.Exe
-Start-Process powershell.exe -WindowStyle Hidden -ArgumentList "-NoProfile -Command Start-Sleep -Seconds $WatchdogSec; Stop-Process -Id $($session.Process.Id) -Force -ErrorAction SilentlyContinue"
+Start-ExpVsWatchdog $session $WatchdogSec
 $dte = $session.Dte
 $dbg = $dte.Debugger
 $null = $dbg.Breakpoints.Add('', $target.Source, (Get-MarkerLine $target.Source 'BREAK_MAIN'))

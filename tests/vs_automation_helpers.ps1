@@ -103,6 +103,11 @@ public class RetryMessageFilter : IOleMessageFilter
     int IOleMessageFilter.RetryRejectedCall(IntPtr callee, int tickCount, int rejectType) { return rejectType == 2 ? 200 : -1; }
     int IOleMessageFilter.MessagePending(IntPtr callee, int tickCount, int pendingType) { return 2; }
 }
+
+public static class Mouse
+{
+    [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+}
 '@
 [RetryMessageFilter]::Register()
 
@@ -128,14 +133,33 @@ function Get-MarkerLine([string]$Source, [string]$Marker) {
     throw "Marker $Marker not found in $Source"
 }
 
-# Builds the C++ (TestCpp) or C# (TestCSharp) test program with the selected Visual Studio
-# (incremental: only when something changed) and returns its source file and .exe.
-function Get-TestTarget([switch]$CSharp) {
+# Builds the C++ (TestCpp), C# (TestCSharp), C++/CLI (TestCppCli) or mixed-mode (TestMixed with
+# TestNative.dll) test program with the selected Visual Studio (incremental: only when something
+# changed) and returns its source file and .exe. For -Mixed, NativeSource is the DLL's source.
+function Get-TestTarget([switch]$CSharp, [switch]$CppCli, [switch]$Mixed) {
+    if ($Mixed) {
+        $native = Join-Path $PSScriptRoot 'TestNative\TestNative.vcxproj'
+        & $VsInfo.MSBuild $native -p:Configuration=Debug -p:Platform=x64 -v:minimal -nologo | Write-Host
+        if ($LASTEXITCODE) { throw "building $native failed" }
+        $project = Join-Path $PSScriptRoot 'TestMixed\TestMixed.csproj'
+        & $VsInfo.MSBuild $project -restore -p:Configuration=Debug -p:Platform=AnyCPU -v:minimal -nologo | Write-Host
+        if ($LASTEXITCODE) { throw "building $project failed" }
+        return [pscustomobject]@{
+            Source       = Join-Path $PSScriptRoot 'TestMixed\Program.cs'
+            NativeSource = Join-Path $PSScriptRoot 'TestNative\main.cpp'
+            Exe          = Join-Path $PSScriptRoot 'bin\TestMixed.exe'
+        }
+    }
     if ($CSharp) {
         $project = Join-Path $PSScriptRoot 'TestCSharp\TestCSharp.csproj'
         $src = Join-Path $PSScriptRoot 'TestCSharp\Program.cs'
         $exe = Join-Path $PSScriptRoot 'bin\TestCSharp.exe'
         $platform = 'AnyCPU'
+    } elseif ($CppCli) {
+        $project = Join-Path $PSScriptRoot 'TestCppCli\TestCppCli.vcxproj'
+        $src = Join-Path $PSScriptRoot 'TestCppCli\main.cpp'
+        $exe = Join-Path $PSScriptRoot 'bin\TestCppCli.exe'
+        $platform = 'x64'
     } else {
         $project = Join-Path $PSScriptRoot 'TestCpp\TestCpp.vcxproj'
         $src = Join-Path $PSScriptRoot 'TestCpp\main.cpp'
@@ -149,14 +173,32 @@ function Get-TestTarget([switch]$CSharp) {
 }
 
 # Starts devenv /rootsuffix Exp /debugexe <exe> and returns its process and DTE object.
-function Start-ExpVs([string]$Exe, [string]$RootSuffix = 'Exp') {
-    $proc = Start-Process $VsInfo.DevEnv -ArgumentList "/rootsuffix $RootSuffix /debugexe `"$Exe`"" -PassThru
+# $Arguments are passed on to the debugged program.
+function Start-ExpVs([string]$Exe, [string]$RootSuffix = 'Exp', [string]$Arguments = '') {
+    # A mouse pointer resting over the code editor opens data tips, which evaluate values on
+    # their own and add windows; keep it in the top-left corner of the screen.
+    $null = [Mouse]::SetCursorPos(0, 0)
+    $proc = Start-Process $VsInfo.DevEnv -ArgumentList ("/rootsuffix $RootSuffix /debugexe `"$Exe`" $Arguments".TrimEnd()) -PassThru
     # The DTE automation object is registered as "VisualStudio.DTE.<major>.0" (17.0, 18.0).
     $moniker = "!VisualStudio.DTE.$($VsInfo.Major).0:$($proc.Id)"
     Wait-Until { [Rot]::Find($moniker) -ne $null } 180 'DTE in the running object table'
     $dte = [Rot]::Find($moniker)
     Wait-Until { $dte.Solution.Projects.Count -ge 1 } 120 'the /debugexe project'
     [pscustomobject]@{ Process = $proc; Dte = $dte }
+}
+
+# Watchdog for a session from Start-ExpVs: a hung debugger must not leave a frozen Visual Studio
+# behind. A hidden PowerShell opens the Visual Studio process (checked by its start time, so a
+# process that got the same id later never matches) and waits on that handle: it ends as soon as
+# Visual Studio exits, after a passed or a failed test, and kills Visual Studio only if it is
+# still running after $Seconds. Windows does not reuse a process id while a handle is open, and
+# the kill goes through that handle, so no other process can be hit.
+function Start-ExpVsWatchdog($Session, [int]$Seconds) {
+    $vs = $Session.Process
+    $script = "`$p = Get-Process -Id $($vs.Id) -ErrorAction SilentlyContinue`n" +
+        "if (`$p -and `$p.StartTime.ToUniversalTime().Ticks -eq $($vs.StartTime.ToUniversalTime().Ticks) -and -not `$p.WaitForExit($($Seconds * 1000))) { `$p.Kill() }"
+    $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($script))
+    $null = Start-Process powershell.exe -WindowStyle Hidden -ArgumentList "-NoProfile -EncodedCommand $encoded"
 }
 
 # Ends a session from Start-ExpVs: stops debugging and closes Visual Studio. The temporary

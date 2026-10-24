@@ -6,22 +6,23 @@ using Microsoft.VisualStudio.Debugger.Evaluation;
 
 namespace AlwaysHex
 {
-    /// <summary>
-    /// Data item ("hidden field") attached to results we hand out; points at the real EE's
-    /// original result. When VS closes our result, the original is closed too (OnClose).
-    /// </summary>
-    internal sealed class WrappedResult : DkmDataItem
+  /// <summary>
+  /// Data item ("hidden field") attached to results we hand out; points at the real EE's
+  /// original result. When VS closes our result, the original is closed too (OnClose).
+  /// </summary>
+  internal sealed class WrappedResult : DkmDataItem
+  {
+    public readonly DkmEvaluationResult Inner;
+
+    public WrappedResult(DkmEvaluationResult inner)
     {
-        public readonly DkmEvaluationResult Inner;
-
-        public WrappedResult(DkmEvaluationResult inner)
-        {
-            Inner = inner;
-        }
-
-        protected override void OnClose()
-        {
-            Inner.Close();
-        }
+      Inner = inner;
     }
+
+    protected override void OnClose()
+    {
+      // Ignore errors, e.g. when the inspection session has already closed it.
+      DkmCleanup.Close(Inner);
+    }
+  }
 }

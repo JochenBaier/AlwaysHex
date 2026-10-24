@@ -6,29 +6,40 @@ using Microsoft.VisualStudio.Debugger.Evaluation;
 
 namespace AlwaysHex
 {
-    /// <summary>
-    /// Closes answers of the real EE that are not handed on to VS (the other-radix twins, or
-    /// everything when the first answer failed) right away; VS would otherwise only release
-    /// them when the debugger continues. Errors while closing are ignored.
-    /// </summary>
-    internal static class DkmCleanup
+  /// <summary>
+  /// Closes answers of the real EE that are not handed on to VS (the other-radix twins, or
+  /// everything when the first answer failed) right away; VS would otherwise only release
+  /// them when the debugger continues. Also closes the expressions we create for forwarding,
+  /// which no inspection session closes for us. Errors while closing are ignored.
+  /// </summary>
+  internal static class DkmCleanup
+  {
+    public static void CloseAll(DkmEvaluationResult[] results)
     {
-        public static void CloseAll(DkmEvaluationResult[] results)
-        {
-            if (results == null)
-                return;
-            foreach (DkmEvaluationResult r in results)
-                Close(r);
-        }
+      if (results == null)
+      {
+        return;
+      }
 
-        public static void Close(DkmEvaluationResult result)
-        {
-            try { if (result != null) result.Close(); } catch (Exception) { }
-        }
-
-        public static void Close(DkmEvaluationResultEnumContext enumContext)
-        {
-            try { if (enumContext != null) enumContext.Close(); } catch (Exception) { }
-        }
+      foreach (DkmEvaluationResult r in results)
+      {
+        Close(r);
+      }
     }
+
+    public static void Close(DkmEvaluationResult result)
+    {
+      try { if (result != null) { result.Close(); } } catch (Exception) { }
+    }
+
+    public static void Close(DkmEvaluationResultEnumContext enumContext)
+    {
+      try { if (enumContext != null) { enumContext.Close(); } } catch (Exception) { }
+    }
+
+    public static void Close(DkmLanguageExpression expression)
+    {
+      try { if (expression != null) { expression.Close(); } } catch (Exception) { }
+    }
+  }
 }

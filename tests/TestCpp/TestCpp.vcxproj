@@ -37,6 +37,8 @@
   <PropertyGroup>
     <OutDir>$(MSBuildThisFileDirectory)..\bin\</OutDir>
     <IntDir>$(MSBuildThisFileDirectory)obj\$(Configuration)\</IntDir>
+    <!-- Without incremental linking, &function is the function itself, not a jump stub. -->
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>

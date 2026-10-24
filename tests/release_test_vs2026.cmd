@@ -1,21 +1,13 @@
 @echo off
 rem SPDX-License-Identifier: MIT
 rem Copyright (c) 2026 Jochen Baier
-rem Full release test of AlwaysHex with Visual Studio 2026 (experimental instance only).
-rem Stops at the first failing step. Can be started by double-click.
+rem Full release test of AlwaysHex with Visual Studio 2026 (experimental instance only):
+rem runs every test script through run_release_tests.ps1 and prints a summary at the end.
+rem Can be started by double-click.
 cd /d "%~dp0.."
-powershell -ExecutionPolicy Bypass -File tests\1_install_in_experimental_vs.ps1 -Vs 2026 || goto failed
-powershell -ExecutionPolicy Bypass -File tests\2_test_value_merging_offline.ps1 -Vs 2026 || goto failed
-powershell -STA -ExecutionPolicy Bypass -File tests\3_test_debugger_values.ps1 -Vs 2026 || goto failed
-powershell -STA -ExecutionPolicy Bypass -File tests\3_test_debugger_values.ps1 -Vs 2026 -CSharp || goto failed
-powershell -STA -ExecutionPolicy Bypass -File tests\4_test_debug_restart.ps1 -Vs 2026 || goto failed
+powershell -ExecutionPolicy Bypass -File tests\run_release_tests.ps1 -Vs 2026
+set result=%errorlevel%
 echo.
-echo Release test with Visual Studio 2026 finished.
+if %result%==0 (echo Release test with Visual Studio 2026 passed.) else (echo Release test with Visual Studio 2026 FAILED, see the summary above.)
 pause
-exit /b 0
-
-:failed
-echo.
-echo Release test with Visual Studio 2026 FAILED (see the output above).
-pause
-exit /b 1
+exit /b %result%
